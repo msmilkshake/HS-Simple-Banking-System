@@ -1,17 +1,27 @@
 package banking;
 
+import java.sql.*;
 import java.util.Scanner;
 
 public class UI {
     private static final Scanner SCN = new Scanner(System.in);
 
     private final Bank BANK = new Bank("400000");
+    private final DB CARD_DB;
 
     private String sessionCard = "";
 
-    public void start() {
-        mainMenu();
-        System.out.println("Bye!");
+    public UI(String[] args) throws SQLException {
+        CARD_DB = new DB(Util.getArgsMap(args).get("fileName"));
+    }
+
+    public void start() throws SQLException {
+        try {
+            mainMenu();
+            System.out.println("Bye!");
+        } finally {
+            CARD_DB.closeConnection();
+        }
     }
 
     private void mainMenu() {
@@ -81,8 +91,8 @@ public class UI {
 
     private void printMainMenu() {
         System.out.println("1. Create an account\n" +
-                        "2. Log into account\n" +
-                        "0. Exit");
+                "2. Log into account\n" +
+                "0. Exit");
     }
 
     private void printSessionMenu() {

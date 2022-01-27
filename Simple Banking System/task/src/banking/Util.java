@@ -3,6 +3,7 @@ package banking;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 public class Util {
     public static String sha256Hash(String s) {
@@ -21,5 +22,22 @@ public class Util {
             e.printStackTrace();
         }
         return hexStr.toString();
+    }
+
+    public static Map<String, String> getArgsMap(String[] args) {
+        Map<String, String> argsMap = new HashMap<>();
+        for (int i = 0; i < args.length; ++i) {
+            if (args[i].startsWith("-")) {
+                String key = args[i].substring(1);
+                String val;
+                if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+                    val = args[++i];
+                } else {
+                    val = "";
+                }
+                argsMap.put(key, val);
+            }
+        }
+        return argsMap;
     }
 }
