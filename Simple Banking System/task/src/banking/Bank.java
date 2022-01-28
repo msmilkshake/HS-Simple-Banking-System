@@ -1,12 +1,7 @@
 package banking;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Bank {
     private final String BANK_ID;
-
-    private Map<String, Card> issuedCards = new HashMap<>();
 
     public Bank(String bankId) {
         BANK_ID = bankId;
@@ -14,20 +9,16 @@ public class Bank {
 
     public String createAccount() {
         Card card = CardIssuer.issue(BANK_ID);
-        String pin = CardIssuer.getLastGeneratedPin();
-        issuedCards.put(card.toString(), card);
+        DB.getInstance().insertCard(card);
         return "Your card number:\n" + card + "\n" +
-                "Your card PIN:\n" + pin;
+                "Your card PIN:\n" + card.getPin();
     }
 
     public boolean login(String cardNumber, String pin) {
-        if (issuedCards.containsKey(cardNumber)) {
-            return issuedCards.get(cardNumber).isCorrectPin(pin);
-        }
-        return false;
+        return DB.getInstance().queryCard(cardNumber, pin);
     }
 
     public int getCardBalance(String cardNumber) {
-        return issuedCards.get(cardNumber).getBalance();
+        return DB.getInstance().getBalance(cardNumber);
     }
 }

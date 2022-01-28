@@ -760,6 +760,12 @@ files:
 - name: src/banking/DB.java
   visible: true
   learner_created: true
+- name: card.s3db
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/8427#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Fri, 28 Jan 2022 02:06:17 UTC
 record: -1

@@ -3,9 +3,12 @@ package banking;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Util {
+
+    // Sad... Can't save PIN as hashes in this stage... (ಥ︵ಥ)
     public static String sha256Hash(String s) {
         StringBuilder hexStr = new StringBuilder(64);
         try {
