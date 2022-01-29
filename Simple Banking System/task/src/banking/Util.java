@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 public class Util {
-
-    // Sad... Can't save PIN as hashes in this stage... (ಥ︵ಥ)
+    
+    // Sad... Can't save PIN as sha-256 hashes in this stage... (ಥ︵ಥ)
     public static String sha256Hash(String s) {
         StringBuilder hexStr = new StringBuilder(64);
         try {
@@ -27,7 +27,7 @@ public class Util {
         }
         return hexStr.toString();
     }
-
+    
     public static Map<String, String> getArgsMap(String[] args) {
         Map<String, String> argsMap = new HashMap<>();
         for (int i = 0; i < args.length; ++i) {
@@ -44,9 +44,9 @@ public class Util {
         }
         return argsMap;
     }
-
+    
     public static String getLuhnDigit(String number) {
-        int[] nums =number.chars()
+        int[] nums = number.chars()
                 .map(c -> c - '0').toArray();
         int checksum = 10 - IntStream.range(0, nums.length)
                 .map(i -> i % 2 == 0 ? nums[i] >= 5 ? 1 +

@@ -2,13 +2,17 @@ package banking;
 
 import org.sqlite.SQLiteDataSource;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class DB {
     
     private static DB instance;
     
-    private SQLiteDataSource src = new SQLiteDataSource();
+    private final SQLiteDataSource SRC = new SQLiteDataSource();
     
     private DB() {
     }
@@ -27,7 +31,7 @@ public class DB {
             throw new IllegalArgumentException("-fileName command line argument" +
                     " not specified.");
         }
-        instance.src.setUrl("jdbc:sqlite:" + path);
+        instance.SRC.setUrl("jdbc:sqlite:" + path);
         instance.create();
     }
     
@@ -38,19 +42,9 @@ public class DB {
                 "    pin TEXT NOT NULL, " +
                 "    balance INTEGER DEFAULT 0 " +
                 ");";
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              Statement s = conn.createStatement()) {
             s.execute(query);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    public void update(String query) {
-        try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement();
-             ResultSet result = s.executeQuery(query)) {
-            
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -59,7 +53,7 @@ public class DB {
     public boolean matchCardInfo(String cardNum, String pin) {
         String cardQuery = "SELECT * FROM card WHERE number = ?";
         boolean success = false;
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              PreparedStatement s = conn.prepareStatement(cardQuery)) {
             s.setString(1, cardNum);
             try (ResultSet result = s.executeQuery()) {
@@ -73,14 +67,14 @@ public class DB {
         return success;
     }
     
-    public boolean cardExists(Card card) {
+    public boolean cardExists(String card) {
         String query = "SELECT number " +
                 "FROM card " +
                 "WHERE number = ?";
         boolean exists = true;
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              PreparedStatement s = conn.prepareStatement(query)) {
-            s.setString(1, card.toString());
+            s.setString(1, card);
             try (ResultSet result = s.executeQuery()) {
                 exists = result.next();
             }
@@ -93,7 +87,7 @@ public class DB {
     public void insertCard(Card card) {
         String query = "INSERT INTO card (id, number, pin) " +
                 "VALUES (NULL, ?, ?)";
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              PreparedStatement s = conn.prepareStatement(query)) {
             s.setString(1, card.toString());
             s.setString(2, card.getPin());
@@ -107,7 +101,7 @@ public class DB {
         String query = "SELECT balance " +
                 "FROM card " +
                 "WHERE number = ?";
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              PreparedStatement s = conn.prepareStatement(query)) {
             s.setString(1, card.toString());
             try (ResultSet result = s.executeQuery()) {
@@ -121,21 +115,11 @@ public class DB {
         return -1;
     }
     
-    public void query(String query) {
-        try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement();
-             ResultSet result = s.executeQuery(query)) {
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    
     public int addMoney(Card card, int money) {
         String query = "UPDATE card " +
                 "SET balance = balance + ? " +
                 "WHERE number = ?";
-        try (Connection conn = src.getConnection();
+        try (Connection conn = SRC.getConnection();
              PreparedStatement s = conn.prepareStatement(query)) {
             s.setInt(1, money);
             s.setString(2, card.toString());
@@ -144,5 +128,48 @@ public class DB {
             e.printStackTrace();
         }
         return 0;
+    }
+    
+    public boolean transfer(Card sender, String receiver, int amount) {
+        String updateSender = "UPDATE card " +
+                "SET balance = balance - ? " +
+                "WHERE number = ?";
+        String updateReceiver = "UPDATE card " +
+                "SET balance = balance + ? " +
+                "WHERE number = ?";
+        try (Connection conn = SRC.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement sendQuery = conn.prepareStatement(updateSender);
+                 PreparedStatement receiveQuery = conn.prepareStatement(updateReceiver)) {
+                if (getBalance(sender) < amount) {
+                    return false;
+                }
+                sendQuery.setInt(1, amount);
+                sendQuery.setString(2, sender.toString());
+                sendQuery.executeUpdate();
+                receiveQuery.setInt(1, amount);
+                receiveQuery.setString(2, receiver);
+                receiveQuery.executeUpdate();
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public void deleteCard(Card card) {
+        String query = "DELETE FROM card WHERE number = ?";
+        try (Connection conn = SRC.getConnection();
+             PreparedStatement s = conn.prepareStatement(query)) {
+            s.setString(1, card.toString());
+            s.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
