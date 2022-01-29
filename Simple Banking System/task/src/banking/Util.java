@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 public class Util {
 
@@ -42,5 +43,15 @@ public class Util {
             }
         }
         return argsMap;
+    }
+
+    public static String getLuhnDigit(String number) {
+        int[] nums =number.chars()
+                .map(c -> c - '0').toArray();
+        int checksum = 10 - IntStream.range(0, nums.length)
+                .map(i -> i % 2 == 0 ? nums[i] >= 5 ? 1 +
+                        (2 * (nums[i] - 5)) : nums[i] * 2 : nums[i])
+                .sum() % 10;
+        return "" + (checksum % 10);
     }
 }

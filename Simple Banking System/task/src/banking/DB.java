@@ -2,20 +2,17 @@ package banking;
 
 import org.sqlite.SQLiteDataSource;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class DB {
-
+    
     private static DB instance;
-
+    
     private SQLiteDataSource src = new SQLiteDataSource();
-
+    
     private DB() {
     }
-
+    
     public static DB getInstance() {
         if (instance == null) {
             throw new IllegalStateException("DB not initialized. Call" +
@@ -23,7 +20,7 @@ public class DB {
         }
         return instance;
     }
-
+    
     public static void init(String path) {
         instance = new DB();
         if (path == null) {
@@ -33,10 +30,9 @@ public class DB {
         instance.src.setUrl("jdbc:sqlite:" + path);
         instance.create();
     }
-
+    
     private void create() {
-        String query = "" +
-                "CREATE TABLE IF NOT EXISTS card ( " +
+        String query = "CREATE TABLE IF NOT EXISTS card ( " +
                 "    id INTEGER PRIMARY KEY," +
                 "    number TEXT NOT NULL, " +
                 "    pin TEXT NOT NULL, " +
@@ -44,104 +40,109 @@ public class DB {
                 ");";
         try (Connection conn = src.getConnection();
              Statement s = conn.createStatement()) {
-            s.executeUpdate(query);
+            s.execute(query);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
+    
     public void update(String query) {
         try (Connection conn = src.getConnection();
              Statement s = conn.createStatement();
              ResultSet result = s.executeQuery(query)) {
-
+            
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
-
-    public boolean queryCard(String cardNum, String pin) {
-        String cardQuery = "SELECT * FROM card WHERE number = %s;";
+    
+    public boolean matchCardInfo(String cardNum, String pin) {
+        String cardQuery = "SELECT * FROM card WHERE number = ?";
+        boolean success = false;
         try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement();
-             ResultSet result = s.executeQuery(
-                     String.format(cardQuery, cardNum))) {
-            boolean success = result.next();
-            System.err.println("Got Id: " + (success ?
-                    result.getInt(1) : "NOT FOUND"));
-            return  success &&
-                    result.getString(2).equals(cardNum) &&
-                    result.getString(3).equals(pin);
+             PreparedStatement s = conn.prepareStatement(cardQuery)) {
+            s.setString(1, cardNum);
+            try (ResultSet result = s.executeQuery()) {
+                success = result.next() &&
+                        result.getString(2).equals(cardNum) &&
+                        result.getString(3).equals(pin);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return false;
+        return success;
     }
-
-    public boolean cardExists(String cardNum) {
-        String query = String.format("" +
-                "SELECT number " +
+    
+    public boolean cardExists(Card card) {
+        String query = "SELECT number " +
                 "FROM card " +
-                "WHERE number = '%s';",
-                cardNum);
+                "WHERE number = ?";
         boolean exists = true;
         try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement();
-             ResultSet result = s.executeQuery(query)) {
-            exists = result.next();
-            System.err.println("Card exists -- " + exists);
+             PreparedStatement s = conn.prepareStatement(query)) {
+            s.setString(1, card.toString());
+            try (ResultSet result = s.executeQuery()) {
+                exists = result.next();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return exists;
     }
-
+    
     public void insertCard(Card card) {
-        String query = String.format("" +
-                "INSERT INTO card (id, number, pin) " +
-                "VALUES (NULL, '%s', '%s');",
-                card, card.getPin());
+        String query = "INSERT INTO card (id, number, pin) " +
+                "VALUES (NULL, ?, ?)";
         try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement()) {
-            int result = s.executeUpdate(query);
-            if (result == 1) {
-                System.err.println("Card insert -- SUCCESS");
-            }
+             PreparedStatement s = conn.prepareStatement(query)) {
+            s.setString(1, card.toString());
+            s.setString(2, card.getPin());
+            s.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
-    public int getBalance(String cardNumber) {
-        String query = String.format("" +
-                "SELECT balance " +
+    
+    public int getBalance(Card card) {
+        String query = "SELECT balance " +
                 "FROM card " +
-                "WHERE number = '%s';",
-                cardNumber);
+                "WHERE number = ?";
         try (Connection conn = src.getConnection();
-             Statement s = conn.createStatement();
-             ResultSet result = s.executeQuery(query)) {
-            System.err.print("Get balance -- ");
-            if (result.next()) {
-                System.err.println("SUCCESS");
-                return result.getInt(1);
-            } else {
-                System.err.println("NO RESULTS");
+             PreparedStatement s = conn.prepareStatement(query)) {
+            s.setString(1, card.toString());
+            try (ResultSet result = s.executeQuery()) {
+                if (result.next()) {
+                    return result.getInt(1);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return -1;
     }
-
+    
     public void query(String query) {
         try (Connection conn = src.getConnection();
              Statement s = conn.createStatement();
              ResultSet result = s.executeQuery(query)) {
-
+            
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+    
+    public int addMoney(Card card, int money) {
+        String query = "UPDATE card " +
+                "SET balance = balance + ? " +
+                "WHERE number = ?";
+        try (Connection conn = src.getConnection();
+             PreparedStatement s = conn.prepareStatement(query)) {
+            s.setInt(1, money);
+            s.setString(2, card.toString());
+            return s.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 }

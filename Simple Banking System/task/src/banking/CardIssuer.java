@@ -12,13 +12,14 @@ public class CardIssuer {
         String accountNumber;
         String checksum;
         String pin;
+        Card card;
         do {
             accountNumber = generateUniqueAccountNumber(bankId);
             checksum = getChecksum(bankId, accountNumber);
             pin = generatePin();
-        } while (DB.getInstance().cardExists(
-                bankId + accountNumber + checksum + pin));
-        return new Card(bankId, accountNumber, checksum, pin);
+            card = new Card(bankId, accountNumber, checksum, pin);
+        } while (DB.getInstance().cardExists(card));
+        return card;
     }
 
     private static String generateUniqueAccountNumber(String bankId) {
@@ -38,13 +39,6 @@ public class CardIssuer {
     }
 
     private static String getChecksum(String bankId, String accountNumber) {
-        int[] nums = (bankId + accountNumber).chars()
-                .map(c -> c - '0').toArray();
-        int checksum = 10 - IntStream.range(0, nums.length)
-                .map(i -> i % 2 == 0 ? nums[i] >= 5 ? 1 +
-                        (2 * (nums[i] - 5)) : nums[i] * 2 : nums[i])
-                .sum() % 10;
-        return "" + (checksum % 10);
+        return Util.getLuhnDigit(bankId + accountNumber);
     }
 }
-
